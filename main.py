@@ -12,44 +12,7 @@ from typing import Mapping
 import httpx
 
 import settings
-
-# TODO: abstract this out of main file (ideally, out of python)
-configs = [
-    {
-        "username": "mrekk",
-        "game_mode": "osu",
-        "star_rating": {"min": 5.0, "max": 13.0},
-        "approach_rate": {"min": 1.0, "max": 10.0},
-        # "overall_difficulty": {"min": 5.0, "max": 10.0},
-        # "circle_size": {"min": 5.0, "max": 10.0},
-        # "health_points": {"min": 5.0, "max": 10.0},
-        # "song_length": {"min": 180.0, "max": 240.0},
-    },
-    {
-        "username": "Justice",
-        "game_mode": "osu",
-        "star_rating": {"min": 5.0, "max": 10.0},
-        "approach_rate": {"min": 1.0, "max": 10.0},
-    },
-    {
-        "username": "mlaw",
-        "game_mode": "osu",
-        "star_rating": {"min": 7.0, "max": 10.0},
-        "approach_rate": {"min": 5.0, "max": 10.0},
-    },
-    {
-        "username": "chocomint",
-        "game_mode": "osu",
-        "star_rating": {"min": 7.0, "max": 10.0},
-        "approach_rate": {"min": 5.0, "max": 10.0},
-    },
-    {
-        "username": "im a fancy lad",
-        "game_mode": "osu",
-        "star_rating": {"min": 7.0, "max": 10.0},
-        "approach_rate": {"min": 5.0, "max": 10.0},
-    },
-]
+import hosts
 
 
 @dataclass
@@ -217,14 +180,14 @@ async def main() -> int:
     user_ids = await asyncio.gather(
         *[
             asyncio.create_task(resolve_user_id(config["username"]))
-            for config in configs
+            for config in hosts.configs
         ]
     )
 
     await asyncio.gather(
         *[
             asyncio.create_task(download_user_maps(user_id, config))
-            for user_id, config in zip(user_ids, configs)
+            for user_id, config in zip(user_ids, hosts.configs)
         ]
     )
 
