@@ -205,8 +205,7 @@ async def download_user_maps(user_id: int, config: Mapping[str, Any]) -> None:
 
     for score in await get_user_recent_scores(user_id):
         if should_download(score, config):
-            beatmapset_id = score["beatmapset"]["id"]
-            tasks.append(asyncio.create_task(download_map(beatmapset_id)))
+            tasks.append(asyncio.create_task(download_map(score["beatmapset"]["id"])))
             downloaded_beatmapsets.append(score["beatmapset"]["id"])
 
     await asyncio.gather(*tasks)
