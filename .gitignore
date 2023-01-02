@@ -1,0 +1,6 @@
+.env
+beatmapsets/
+__pycache__/
+.vscode/
+*.lprof
+*.pstats
