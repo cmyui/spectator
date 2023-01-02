@@ -119,6 +119,8 @@ async def make_osu_api_v2_request(
     if rate_limit_tracker.hit_rate_limit():
         await asyncio.sleep(rate_limit_tracker.seconds_until_reset())
         rate_limit_tracker = None
+    elif rate_limit_tracker.seconds_until_reset() <= 0:
+        rate_limit_tracker = None
     else:
         rate_limit_tracker.record_request()
 
