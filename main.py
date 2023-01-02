@@ -21,7 +21,43 @@ class Authorization:
     api_token_expiry: datetime
 
 
+@dataclass
+class Ratelimit:
+    requests_per_period: int
+    period_length: int  # in seconds
+
+
+@dataclass
+class RatelimitTracker:
+    rate_limit: Ratelimit
+    period_start: datetime
+    requests_made_in_period: int = 0
+
+    def seconds_until_reset(self) -> float:
+        end_of_period = self.period_start + timedelta(
+            seconds=self.rate_limit.period_length
+        )
+        return (end_of_period - datetime.now()).total_seconds()
+
+    def hit_rate_limit(self) -> bool:
+        if self.seconds_until_reset() <= 0:
+            return False
+
+        return self.requests_made_in_period >= self.rate_limit.requests_per_period
+
+    def record_request(self) -> None:
+        self.requests_made_in_period += 1
+
+
+OSU_API_V2_RATE_LIMIT = Ratelimit(
+    # https://osu.ppy.sh/docs/index.html#terms-of-use
+    requests_per_period=500,
+    period_length=60,
+)
+
+http_client: httpx.AsyncClient
 authorization: Authorization | None = None
+rate_limit_tracker: RatelimitTracker | None = None
 
 
 def is_expired(authorization: Authorization) -> bool:
@@ -32,7 +68,6 @@ def is_expired(authorization: Authorization) -> bool:
 auth_lock: asyncio.Lock = asyncio.Lock()
 
 
-# TODO: ratelimit
 async def make_osu_api_v2_request(
     method: Literal[
         "HEAD",
@@ -74,7 +109,19 @@ async def make_osu_api_v2_request(
                 ),
             )
 
-    # TODO: implement ratelimit (peppy suggests 60/m, 1200/m is max)
+    global rate_limit_tracker
+    if rate_limit_tracker is None:
+        rate_limit_tracker = RatelimitTracker(
+            rate_limit=OSU_API_V2_RATE_LIMIT,
+            period_start=datetime.now(),
+        )
+
+    if rate_limit_tracker.hit_rate_limit():
+        await asyncio.sleep(rate_limit_tracker.seconds_until_reset())
+        rate_limit_tracker = None
+    else:
+        rate_limit_tracker.record_request()
+
     response = await http_client.request(
         method=method,
         url=url,
