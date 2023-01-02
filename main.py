@@ -83,7 +83,7 @@ async def make_osu_api_v2_request(
     params: Mapping[str, Any] | None = None,
     json: Mapping[str, Any] | None = None,
 ) -> Any:
-    global authorization, http_client
+    global http_client, authorization
 
     async with auth_lock:
         if authorization:
@@ -100,7 +100,7 @@ async def make_osu_api_v2_request(
                     "scope": "public",
                 },
             )
-            assert response.status_code in range(200, 300)
+            response.raise_for_status()
 
             authorization = Authorization(
                 api_token=response.json()["access_token"],
@@ -129,7 +129,7 @@ async def make_osu_api_v2_request(
         json=json,
         headers={"Authorization": f"Bearer {authorization.api_token}"},
     )
-    assert response.status_code in range(200, 300)
+    response.raise_for_status()
 
     return response.json()
 
@@ -145,7 +145,7 @@ async def resolve_user_id(username: str) -> int:
             "k": settings.API_V1_KEY,
         },
     )
-    assert response.status_code in range(200, 300)
+    response.raise_for_status()
 
     user_id = int(response.json()[0]["user_id"])
     return user_id
@@ -157,7 +157,7 @@ async def download_map(beatmapset_id: int) -> None:
         # f"https://us.kitsu.moe/api/d/{beatmapset_id}",
         follow_redirects=True,
     )
-    assert response.status_code in range(200, 300)
+    response.raise_for_status()
 
     beatmap_file_content = response.read()
     with open(f"beatmapsets/{beatmapset_id}.osz", "wb") as f:
