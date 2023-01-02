@@ -82,8 +82,8 @@ async def make_osu_api_v2_request(
         "TRACE",
     ],
     url: str,
-    params: Mapping[str, Any],
-    json: Mapping[str, Any],
+    params: Mapping[str, Any] | None = None,
+    json: Mapping[str, Any] | None = None,
 ) -> Any:
     global authorization, http_client
 
@@ -102,6 +102,7 @@ async def make_osu_api_v2_request(
                     "scope": "public",
                 },
             )
+            assert response.status_code in range(200, 300)
 
             authorization = Authorization(
                 api_token=response.json()["access_token"],
@@ -146,8 +147,11 @@ async def download_map(beatmapset_id: int) -> None:
         # f"https://us.kitsu.moe/api/d/{beatmapset_id}",
         follow_redirects=True,
     )
+    assert response.status_code in range(200, 300)
+
+    beatmap_file_content = response.read()
     with open(f"beatmapsets/{beatmapset_id}.osz", "wb") as f:
-        f.write(response.read())
+        f.write(beatmap_file_content)
 
 
 async def get_user_recent_scores(
@@ -164,11 +168,10 @@ async def get_user_recent_scores(
             "limit": limit,
             "offset": offset,
         },
-        json={},
     )
 
 
-def should_download(score: dict[str, Any], config: Mapping[str, Any]) -> bool:
+def should_download(score: Mapping[str, Any], config: Mapping[str, Any]) -> bool:
     return (
         score["beatmap"]["mode"] == config["game_mode"]
         and (
@@ -192,18 +195,21 @@ async def download_user_maps(user_id: int, config: Mapping[str, Any]) -> None:
         if should_download(score, config):
             beatmapset_id = score["beatmapset"]["id"]
             tasks.append(asyncio.create_task(download_map(beatmapset_id)))
-
             downloaded_beatmapsets.append(score["beatmapset"]["id"])
 
     await asyncio.gather(*tasks)
 
 
+def get_currently_downloaded_beatmapsets() -> list[int]:
+    return [int(path.removesuffix(".osz")) for path in os.listdir("beatmapsets")]
+
+
 async def main() -> int:
-    # keep track of beatmapsets we have already downloaded
+    if not os.path.exists("beatmapsets"):
+        os.mkdir("beatmapsets")
+
     global downloaded_beatmapsets
-    downloaded_beatmapsets = [
-        int(path.removesuffix(".osz")) for path in os.listdir("beatmapsets")
-    ]
+    downloaded_beatmapsets = get_currently_downloaded_beatmapsets()
 
     global http_client
     http_client = httpx.AsyncClient()
