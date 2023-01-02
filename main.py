@@ -155,7 +155,8 @@ async def resolve_user_id(username: str) -> int:
 
 async def download_map(beatmapset_id: int) -> None:
     response = await http_client.get(
-        f"https://api.chimu.moe/v1/download/{beatmapset_id}",
+        f"https://catboy.best/d/{beatmapset_id}",
+        # f"https://api.chimu.moe/v1/download/{beatmapset_id}",
         # f"https://us.kitsu.moe/api/d/{beatmapset_id}",
         follow_redirects=True,
     )
